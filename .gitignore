@@ -1,0 +1,24 @@
+# Secrets — NEVER commit
+.env
+.env.local
+*.json
+!templates/*.json
+!skills/*/contacts.example.json
+service-account-*.json
+credentials.json
+session.session
+*.session
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,23 @@
+{
+  "_comment": "Шаблон. Скопируй как contacts.json и заполни своими.",
+  "contacts": [
+    {
+      "name": "Иван Иванов",
+      "telegram": "@ivanov",
+      "phone": "+71234567890",
+      "crm_company": "Acme Corp",
+      "crm_sheet": "Сделки",
+      "priority": 1,
+      "notes": "ЛПР, активная сделка"
+    },
+    {
+      "name": "Мария Петрова",
+      "telegram": "",
+      "phone": "+79876543210",
+      "crm_company": "Beta LLC",
+      "crm_sheet": "Лиды",
+      "priority": 2,
+      "notes": "первый контакт после конференции"
+    }
+  ]
+}
