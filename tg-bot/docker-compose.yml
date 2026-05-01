@@ -1,0 +1,17 @@
+services:
+  bot:
+    build: .
+    container_name: crm-tg-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./secrets:/app/secrets:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; assert os.path.exists('/app/data/healthy')"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
