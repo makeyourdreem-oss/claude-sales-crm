@@ -30,10 +30,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await query.edit_message_text('❌ Отменено')
 
     if action == 'edit':
+        item.awaiting_correction = True
+        item.chat_id = query.message.chat_id
+        item.preview_message_id = query.message.message_id
         return await query.edit_message_text(
-            'Напиши уточнение в чат — например, "это не Лиды, это Партнёры" '
-            'или "компания на самом деле Beta Corp". Я перепарсю.\n\n'
+            '✏️ Жду правку — голосом или текстом.\n\n'
+            'Например: _"это не Лиды, это Партнёры"_, '
+            '_"компания на самом деле Beta Corp"_, '
+            '_"добавь email ivan@example.com"_.\n\n'
             'Или /cancel если передумал.',
+            parse_mode=ParseMode.MARKDOWN,
         )
 
     if action == 'ok':

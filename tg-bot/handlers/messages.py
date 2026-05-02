@@ -32,12 +32,35 @@ async def reject_unauthorized(update: Update):
 
 async def send_preview(update: Update, payload: dict, source_text: str = ''):
     user_id = update.effective_user.id
-    item_id = state.add(payload, user_id, source_text)
-    await update.message.reply_text(
+    sent = await update.message.reply_text(
         format_preview(payload),
         parse_mode=ParseMode.MARKDOWN,
-        reply_markup=build_keyboard(item_id),
     )
+    item_id = state.add(
+        payload,
+        user_id,
+        source_text,
+        chat_id=sent.chat_id,
+        preview_message_id=sent.message_id,
+    )
+    await sent.edit_reply_markup(reply_markup=build_keyboard(item_id))
+
+
+async def update_preview(update: Update, context: ContextTypes.DEFAULT_TYPE, item_id: str, item, new_payload: dict):
+    """Применяет новый payload к существующему превью (edit message)."""
+    state.update_payload(item_id, new_payload)
+    try:
+        await context.bot.edit_message_text(
+            chat_id=item.chat_id,
+            message_id=item.preview_message_id,
+            text=format_preview(new_payload),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=build_keyboard(item_id),
+        )
+        await update.message.reply_text('✏️ Правка применена. Проверь превью выше.')
+    except Exception as e:
+        logger.exception('edit_message failed')
+        await update.message.reply_text(f'Не получилось обновить превью: {e}')
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -47,6 +70,18 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text or ''
     if not text.strip():
         return
+
+    awaiting = state.find_awaiting_for_user(update.effective_user.id)
+    if awaiting:
+        item_id, item = awaiting
+        await update.message.reply_chat_action('typing')
+        gemini = context.bot_data['gemini']
+        try:
+            new_payload = await gemini.apply_correction_text(item.payload, text)
+        except Exception as e:
+            logger.exception('correction failed')
+            return await update.message.reply_text(f'Не получилось применить правку: {e}')
+        return await update_preview(update, context, item_id, item, new_payload)
 
     if update.message.forward_origin:
         sender = ''
@@ -85,6 +120,13 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await file.download_to_drive(str(tmp_path))
         gemini = context.bot_data['gemini']
+
+        awaiting = state.find_awaiting_for_user(update.effective_user.id)
+        if awaiting:
+            item_id, item = awaiting
+            new_payload = await gemini.apply_correction_audio(item.payload, tmp_path)
+            return await update_preview(update, context, item_id, item, new_payload)
+
         payload = await gemini.extract_from_audio(tmp_path)
     except Exception as e:
         logger.exception('Voice processing failed')

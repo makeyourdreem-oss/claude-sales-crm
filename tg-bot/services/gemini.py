@@ -90,6 +90,36 @@ class GeminiClient:
             except Exception as e:
                 logger.warning('Failed to delete uploaded file: %s', e)
 
+    async def apply_correction_text(self, original_payload: dict, correction: str) -> dict:
+        """Применить текстовую правку к существующему payload."""
+        prompt = (
+            'Ниже текущий payload для CRM в JSON. Пользователь даёт правку. '
+            'Примени правку и верни обновлённый JSON в той же структуре. '
+            'Не меняй поля, которых правка не касается.\n\n'
+            f'CURRENT PAYLOAD:\n{json.dumps(original_payload, ensure_ascii=False, indent=2)}\n\n'
+            f'CORRECTION:\n{correction}'
+        )
+        response = await self._model.generate_content_async(prompt)
+        return _parse_json(response.text)
+
+    async def apply_correction_audio(self, original_payload: dict, audio_path: Path) -> dict:
+        """Применить голосовую правку: расшифровать аудио и применить как correction."""
+        uploaded = genai.upload_file(str(audio_path))
+        prompt = (
+            'Ниже текущий payload для CRM в JSON. Пользователь даёт голосовую правку. '
+            'Расшифруй аудио, примени правку и верни обновлённый JSON в той же структуре. '
+            'Не меняй поля, которых правка не касается.\n\n'
+            f'CURRENT PAYLOAD:\n{json.dumps(original_payload, ensure_ascii=False, indent=2)}'
+        )
+        response = await self._model.generate_content_async([prompt, uploaded])
+        try:
+            return _parse_json(response.text)
+        finally:
+            try:
+                genai.delete_file(uploaded.name)
+            except Exception as e:
+                logger.warning('Failed to delete uploaded file: %s', e)
+
 
 def _parse_json(text: str) -> dict:
     text = text.strip()
